@@ -1,5 +1,4 @@
-// We'll use a base URL that will be updated once backend is ready
-const API_BASE_URL = 'http://localhost:8000';
+import { API_BASE_URL, WS_BASE_URL } from '../config';
 
 // Helper function for fetch requests
 const fetchWithOptions = async (endpoint, options = {}) => {
@@ -26,6 +25,45 @@ const fetchWithOptions = async (endpoint, options = {}) => {
     console.error(`Error fetching ${url}:`, error);
     throw error;
   }
+};
+
+// WebSocket connection handler
+export const createWebSocketConnection = (sessionId, onMessage, onError) => {
+  const socket = new WebSocket(`${WS_BASE_URL}/ws/chat/${sessionId}`);
+  
+  socket.onopen = () => {
+    console.log('WebSocket connection established');
+  };
+  
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      onMessage(data);
+    } catch (error) {
+      console.error('Error parsing WebSocket message:', error);
+    }
+  };
+  
+  socket.onerror = (error) => {
+    console.error('WebSocket error:', error);
+    if (onError) onError(error);
+  };
+  
+  socket.onclose = () => {
+    console.log('WebSocket connection closed');
+  };
+  
+  // Return methods to interact with the WebSocket
+  return {
+    sendMessage: (message) => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ message }));
+      } else {
+        console.error('WebSocket is not open');
+      }
+    },
+    close: () => socket.close()
+  };
 };
 
 export const chatService = {
@@ -72,6 +110,38 @@ export const chatService = {
       });
     } catch (error) {
       console.error('Error creating session:', error);
+      throw error;
+    }
+  },
+  
+  // Get backend status
+  getStatus: async () => {
+    try {
+      return await fetchWithOptions('/status');
+    } catch (error) {
+      console.error('Error getting status:', error);
+      throw error;
+    }
+  },
+
+  // Get all sessions
+  getAllSessions: async () => {
+    try {
+      return await fetchWithOptions('/sessions');
+    } catch (error) {
+      console.error('Error getting all sessions:', error);
+      throw error;
+    }
+  },
+
+  // Delete all sessions
+  deleteAllSessions: async () => {
+    try {
+      return await fetchWithOptions('/sessions', {
+        method: 'DELETE'
+      });
+    } catch (error) {
+      console.error('Error deleting all sessions:', error);
       throw error;
     }
   }
