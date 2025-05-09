@@ -111,71 +111,8 @@ const ChatMessage = ({ message, isUser }) => {
         {isUser ? (
           <p className="text-sm">{message.content}</p>
         ) : (
-          <div className="prose dark:prose-invert prose-sm max-w-none overflow-auto text-sm dark:text-gray-100 text-left">
-            <ReactMarkdown 
-              remarkPlugins={[remarkGfm]}
-              components={{
-                // Override default components for better styling
-                code({node, inline, className, children, ...props}) {
-                  return (
-                    <code className={`${className} font-mono`} {...props}>
-                      {children}
-                    </code>
-                  )
-                },
-                pre({node, children, ...props}) {
-                  return (
-                    <pre {...props} className="rounded-md shadow-sm">
-                      {children}
-                    </pre>
-                  )
-                },
-                table({node, ...props}) {
-                  return (
-                    <div className="overflow-x-auto my-2 rounded-md shadow-sm border border-gray-200 dark:border-gray-600">
-                      <table {...props} />
-                    </div>
-                  )
-                },
-                // Custom handling for citations
-                p({node, children, ...props}) {
-                  // Process text to find citations like [1], [2], etc.
-                  const processedChildren = React.Children.map(children, child => {
-                    if (typeof child !== 'string') return child;
-                    
-                    // Replace citation references with enhanced components
-                    return child.split(/(\[\d+\])/).map((part, i) => {
-                      const citationMatch = part.match(/\[(\d+)\]/);
-                      if (citationMatch) {
-                        const id = citationMatch[1];
-                        const citation = citations[id];
-                        return <CitationTooltip key={i} citation={citation}>{part}</CitationTooltip>;
-                      }
-                      return part;
-                    });
-                  });
-                  
-                  return <p {...props}>{processedChildren}</p>;
-                },
-                // Make links open in new tab and style them
-                a({node, href, children, ...props}) {
-                  return (
-                    <a 
-                      href={href} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline transition-colors duration-200"
-                      {...props}
-                    >
-                      {children}
-                    </a>
-                  );
-                }
-              }}
-            >
-              {formattedMessage}
-            </ReactMarkdown>
-            
+          <>
+            <p className="text-sm">{formattedMessage}</p>
             {/* Citations section at bottom if present */}
             {Object.keys(citations).length > 0 && (
               <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
@@ -207,7 +144,7 @@ const ChatMessage = ({ message, isUser }) => {
                 </ul>
               </div>
             )}
-          </div>
+          </>
         )}
         <p className={`text-xs mt-2 ${isUser ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>
           {new Date(message.timestamp).toLocaleTimeString([], {

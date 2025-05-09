@@ -297,6 +297,33 @@ const Chat = () => {
             </svg>
             Sessions
           </button>
+          <button
+            onClick={async () => {
+              try {
+                const sessionResponse = await chatService.createSession();
+                setSessionId(sessionResponse.sessionId);
+                localStorage.setItem('sessionId', sessionResponse.sessionId);
+                setMessages([]);
+                // Optionally, reconnect WebSocket if enabled
+                if (useWebSocket && webSocketRef.current) {
+                  webSocketRef.current.close();
+                  const wsConnection = createWebSocketConnection(
+                    sessionResponse.sessionId,
+                    handleWebSocketMessage
+                  );
+                  webSocketRef.current = wsConnection;
+                }
+              } catch (error) {
+                console.error('Error creating new session:', error);
+              }
+            }}
+            className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 shadow-md flex items-center"
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            New Session
+          </button>
           <div className="text-xs bg-indigo-800 rounded-full px-3 py-1">
             Session: {sessionId.substring(0, 8)}
           </div>
