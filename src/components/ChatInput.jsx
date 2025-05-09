@@ -11,16 +11,26 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
       // Reset height to auto to calculate correct scrollHeight
       textareaRef.current.style.height = 'auto';
       
-      // Set new height based on scrollHeight (content height)
-      const newHeight = Math.min(textareaRef.current.scrollHeight, 150);
+      // Calculate the scrollHeight (content height)
+      const scrollHeight = textareaRef.current.scrollHeight;
+      
+      // Set new height based on scrollHeight with a minimum of 48px and maximum of 150px
+      const newHeight = Math.max(48, Math.min(scrollHeight, 150));
       textareaRef.current.style.height = `${newHeight}px`;
       
       // Calculate rows for the textarea based on content
       const lineHeight = 24; // Approximate line height in pixels
-      const newRows = Math.min(Math.ceil(newHeight / lineHeight), 6);
+      const newRows = Math.max(1, Math.min(Math.ceil(newHeight / lineHeight), 6));
       setRows(newRows);
     }
   }, [message]);
+
+  // Focus textarea when the component mounts or when isLoading changes to false
+  useEffect(() => {
+    if (!isLoading && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [isLoading]);
 
   const handleSendMessage = () => {
     if (message.trim() && !isLoading) {
@@ -28,7 +38,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
       setMessage('');
       // Reset height after sending
       if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = '48px';
       }
       setRows(1);
     }
@@ -43,22 +53,26 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
   };
 
   return (
-    <div className="bg-gradient-to-b from-slate-800 to-slate-900 p-3 md:p-5 shadow-lg">
+    <div className="bg-gradient-to-b from-slate-800 to-slate-900 p-3 md:p-5 border-t border-slate-700 shadow-lg">
       <div className="max-w-4xl mx-auto relative">
         <textarea
           ref={textareaRef}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type your message..."
-          className="w-full pl-4 pr-12 py-3 bg-slate-700 text-gray-100 rounded-xl border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 transition-all duration-300 shadow-inner resize-none text-sm md:text-base font-normal tracking-wide leading-relaxed placeholder-gray-400"
+          placeholder="Type your message... (Shift+Enter for new line)"
+          className="w-full min-h-[48px] pl-4 pr-14 py-3 bg-slate-700 text-gray-100 rounded-xl border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-300 shadow-inner resize-none text-sm md:text-base font-normal tracking-wide leading-relaxed placeholder-gray-400"
           rows={rows}
           disabled={isLoading}
+          style={{
+            overflowY: rows > 1 ? 'auto' : 'hidden',
+          }}
         />
         <button
           onClick={handleSendMessage}
           disabled={!message.trim() || isLoading}
-          className={`absolute right-3 bottom-2.5 md:bottom-3 transition-all duration-300 rounded-full h-8 w-8 md:h-10 md:w-10 flex items-center justify-center ${
+          aria-label="Send message"
+          className={`absolute right-3 bottom-3 transition-all duration-300 rounded-full h-9 w-9 md:h-10 md:w-10 flex items-center justify-center ${
             message.trim() && !isLoading 
               ? 'bg-indigo-500 text-white hover:bg-indigo-600 transform hover:scale-105' 
               : 'bg-slate-600 text-slate-400 cursor-not-allowed'
@@ -75,6 +89,9 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
             </svg>
           )}
         </button>
+      </div>
+      <div className="text-center text-xs text-gray-500 mt-2 hidden md:block">
+        Press Enter to send, Shift+Enter for new line
       </div>
     </div>
   );
