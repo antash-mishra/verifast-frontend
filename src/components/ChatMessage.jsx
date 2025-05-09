@@ -2,6 +2,59 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+// A simple preprocessor to clean up common LLM formatting issues
+const cleanupMarkdown = (text) => {
+  if (!text) return '';
+  
+  // Process line by line for better control
+  const lines = text.split('\n');
+  const cleanedLines = [];
+  let inBulletList = false;
+  
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].trim();
+    
+    // Skip empty lines at the beginning
+    if (cleanedLines.length === 0 && line === '') continue;
+    
+    // Fix bullet points formatting
+    if (line.match(/^[•\-*]\s*(.+)/)) {
+      // Normalize to '* ' format
+      line = line.replace(/^[•\-*]\s*/, '* ');
+      inBulletList = true;
+    } 
+    // Handle orphaned lines that should be part of the previous bullet point
+    else if (inBulletList && line !== '' && !line.startsWith('* ') && !line.startsWith('**Sources')) {
+      // If this line doesn't start with a bullet but previous was a bullet,
+      // append it to the previous line if previous line exists
+      if (cleanedLines.length > 0) {
+        cleanedLines[cleanedLines.length - 1] += ' ' + line;
+        continue; // Skip adding this line separately
+      }
+    } else if (line === '') {
+      inBulletList = false;
+    }
+    
+    // Fix citations formatting (ensure space before citations)
+    line = line.replace(/(\S)\[(\d+)\]/g, '$1 [$2]');
+    
+    // Fix bold formatting
+    line = line.replace(/\*\s+(.+?)\s+\*/g, '*$1*');
+    line = line.replace(/\*([^*]+)\*/g, '**$1**'); // Convert single * to double ** for bold
+    
+    // Add proper spacing for Sources section
+    if (line.match(/^sources:$/i)) {
+      cleanedLines.push(''); // Add empty line before Sources
+      line = '**Sources:**';
+      inBulletList = false;
+    }
+    
+    cleanedLines.push(line);
+  }
+  
+  return cleanedLines.join('\n');
+};
+
 // Citation tooltip component
 const CitationTooltip = ({ children, citation }) => {
   const [showTooltip, setShowTooltip] = useState(false);
@@ -60,9 +113,9 @@ const MarkdownLink = ({href, children}) => {
 // Custom renderer for list items to add proper styling
 const ListItem = ({children, ...props}) => {
   return (
-    <li className="my-2 flex" {...props}>
-      <span className="mr-2">•</span>
-      <span>{children}</span>
+    <li className="my-2 flex items-start" {...props}>
+      <span className="mr-2 mt-1 text-indigo-500 dark:text-indigo-400">•</span>
+      <div className="flex-1">{children}</div>
     </li>
   );
 };
@@ -117,17 +170,8 @@ const ChatMessage = ({ message, isUser }) => {
       content = content.replace(sourcesSectionRegex, '');
     }
     
-    // Process bullet points to ensure they have proper spacing
-    content = content.replace(/\* /g, "\n* ");
-    
-    // Remove any potential header like "Here's some finance news:"
-    content = content.replace(/^.*?news:/, '').trim();
-    
-    // Replace any citation references with tooltips
-    Object.keys(citations).forEach(id => {
-      const citationRegex = new RegExp(`\\[${id}\\]`, 'g');
-      content = content.replace(citationRegex, ` [${id}]`);
-    });
+    // Clean up the content using our preprocessor
+    content = cleanupMarkdown(content);
     
     return content;
   };
@@ -160,7 +204,7 @@ const ChatMessage = ({ message, isUser }) => {
   const messageWithReferences = processMessageWithCitationReferences(formattedMessage);
 
   // Check if content is likely a list (has bullet points)
-  const isListContent = formattedMessage?.includes('*') || formattedMessage?.includes('-');
+  const isListContent = formattedMessage?.includes('*') || formattedMessage?.includes('-') || formattedMessage?.includes('•');
 
   // Custom Markdown components
   const markdownComponents = {
@@ -168,8 +212,8 @@ const ChatMessage = ({ message, isUser }) => {
     li: ListItem,
     strong: ({node, ...props}) => <span className="font-bold text-indigo-700 dark:text-indigo-300" {...props} />,
     p: ({node, ...props}) => <p className="mt-2 mb-2" {...props} />,
-    ul: ({node, ...props}) => <ul className="pl-2 space-y-2" {...props} />,
-    ol: ({node, ...props}) => <ol className="pl-2 list-decimal ml-4 space-y-2" {...props} />,
+    ul: ({node, ...props}) => <ul className="space-y-1 pl-0" {...props} />,
+    ol: ({node, ...props}) => <ol className="space-y-1 pl-4 list-decimal" {...props} />,
   };
 
   return (
@@ -190,7 +234,7 @@ const ChatMessage = ({ message, isUser }) => {
           <p className="text-xs sm:text-sm break-words font-medium leading-relaxed tracking-wide">{message.content}</p>
         ) : (
           <>
-            <div className={`prose prose-sm dark:prose-invert max-w-none ${isListContent ? 'prose-li:my-2' : ''} break-words leading-relaxed tracking-wide prose-headings:font-bold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-strong:text-indigo-700 dark:prose-strong:text-indigo-300 prose-pre:bg-slate-800 prose-pre:text-gray-200 prose-code:text-rose-600 dark:prose-code:text-rose-400`}>
+            <div className={`prose prose-sm dark:prose-invert max-w-none ${isListContent ? 'prose-li:my-1' : ''} break-words leading-relaxed tracking-wide prose-headings:font-bold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-strong:text-indigo-700 dark:prose-strong:text-indigo-300 prose-pre:bg-slate-800 prose-pre:text-gray-200 prose-code:text-rose-600 dark:prose-code:text-rose-400 prose-ul:pl-0`}>
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={markdownComponents}
