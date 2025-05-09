@@ -43,6 +43,30 @@ const CitationTooltip = ({ children, citation }) => {
   );
 };
 
+// Custom renderer for links in markdown
+const MarkdownLink = ({href, children}) => {
+  return (
+    <a 
+      href={href} 
+      target="_blank" 
+      rel="noopener noreferrer" 
+      className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+    >
+      {children}
+    </a>
+  );
+};
+
+// Custom renderer for list items to add proper styling
+const ListItem = ({children, ...props}) => {
+  return (
+    <li className="my-2 flex" {...props}>
+      <span className="mr-2">•</span>
+      <span>{children}</span>
+    </li>
+  );
+};
+
 const ChatMessage = ({ message, isUser }) => {
   // Function to process citation text into structured data
   const extractCitations = (text) => {
@@ -63,6 +87,18 @@ const ChatMessage = ({ message, isUser }) => {
         const source = match[2].trim();
         citations[id] = source;
       }
+    } else {
+      // Look for inline citations without a separate section
+      const inlineCitationRegex = /\[(\d+)\]/g;
+      let match;
+      const matches = new Set();
+      while ((match = inlineCitationRegex.exec(text)) !== null) {
+        const id = match[1];
+        if (!matches.has(id)) {
+          matches.add(id);
+          citations[id] = `Reference ${id}`;
+        }
+      }
     }
     
     return citations;
@@ -81,6 +117,18 @@ const ChatMessage = ({ message, isUser }) => {
       content = content.replace(sourcesSectionRegex, '');
     }
     
+    // Process bullet points to ensure they have proper spacing
+    content = content.replace(/\* /g, "\n* ");
+    
+    // Remove any potential header like "Here's some finance news:"
+    content = content.replace(/^.*?news:/, '').trim();
+    
+    // Replace any citation references with tooltips
+    Object.keys(citations).forEach(id => {
+      const citationRegex = new RegExp(`\\[${id}\\]`, 'g');
+      content = content.replace(citationRegex, ` [${id}]`);
+    });
+    
     return content;
   };
 
@@ -93,6 +141,36 @@ const ChatMessage = ({ message, isUser }) => {
 
   const formattedMessage = formatMessageWithCitations();
   const citations = !isUser ? extractCitations(message.content) : {};
+
+  // Process citation references in the message
+  const processMessageWithCitationReferences = (content) => {
+    if (isUser || !content) return content;
+    
+    let processedContent = content;
+    
+    // Replace citation references with tooltips
+    Object.keys(citations).forEach(id => {
+      const citationRegex = new RegExp(`\\[${id}\\]`, 'g');
+      processedContent = processedContent.replace(citationRegex, `[[${id}]]`);
+    });
+    
+    return processedContent;
+  };
+
+  const messageWithReferences = processMessageWithCitationReferences(formattedMessage);
+
+  // Check if content is likely a list (has bullet points)
+  const isListContent = formattedMessage?.includes('*') || formattedMessage?.includes('-');
+
+  // Custom Markdown components
+  const markdownComponents = {
+    a: MarkdownLink,
+    li: ListItem,
+    strong: ({node, ...props}) => <span className="font-bold text-indigo-700 dark:text-indigo-300" {...props} />,
+    p: ({node, ...props}) => <p className="mt-2 mb-2" {...props} />,
+    ul: ({node, ...props}) => <ul className="pl-2 space-y-2" {...props} />,
+    ol: ({node, ...props}) => <ol className="pl-2 list-decimal ml-4 space-y-2" {...props} />,
+  };
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in-up`}>
@@ -112,7 +190,14 @@ const ChatMessage = ({ message, isUser }) => {
           <p className="text-xs sm:text-sm break-words font-medium leading-relaxed tracking-wide">{message.content}</p>
         ) : (
           <>
-            <p className="text-xs sm:text-sm break-words leading-relaxed tracking-wide">{formattedMessage}</p>
+            <div className={`prose prose-sm dark:prose-invert max-w-none ${isListContent ? 'prose-li:my-2' : ''} break-words leading-relaxed tracking-wide prose-headings:font-bold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-strong:text-indigo-700 dark:prose-strong:text-indigo-300 prose-pre:bg-slate-800 prose-pre:text-gray-200 prose-code:text-rose-600 dark:prose-code:text-rose-400`}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={markdownComponents}
+                children={messageWithReferences}
+              />
+            </div>
+            
             {/* Citations section at bottom if present */}
             {Object.keys(citations).length > 0 && (
               <div className="mt-3 md:mt-4 pt-2 md:pt-3 border-t border-gray-200 dark:border-gray-600">
