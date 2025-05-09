@@ -61,18 +61,23 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type your message... (Shift+Enter for new line)"
-          className="w-full min-h-[48px] pl-4 pr-14 py-3 bg-slate-700 text-gray-100 rounded-xl border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-300 shadow-inner resize-none text-sm md:text-base font-normal tracking-wide leading-relaxed placeholder-gray-400"
-          rows={rows}
+          className="w-full min-h-[48px] pl-4 pr-14 py-3 bg-slate-700 text-gray-100 rounded-xl border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all duration-300 shadow-inner resize-none text-sm md:text-base font-normal tracking-wide leading-relaxed placeholder-gray-400 appearance-none scrollbar-hide"
           disabled={isLoading}
           style={{
-            overflowY: rows > 1 ? 'auto' : 'hidden',
+            overflowY: 'hidden',
+            resize: 'none',
+            appearance: 'none',
+            MozAppearance: 'none',
+            WebkitAppearance: 'none',
           }}
+          maxLength={4000}
+          spellCheck="true"
         />
         <button
           onClick={handleSendMessage}
           disabled={!message.trim() || isLoading}
           aria-label="Send message"
-          className={`absolute right-3 bottom-3 transition-all duration-300 rounded-full h-9 w-9 md:h-10 md:w-10 flex items-center justify-center ${
+          className={`absolute right-3 top-1/2 -translate-y-1/2 transition-all duration-300 rounded-full h-9 w-9 md:h-10 md:w-10 flex items-center justify-center ${
             message.trim() && !isLoading 
               ? 'bg-indigo-500 text-white hover:bg-indigo-600 transform hover:scale-105' 
               : 'bg-slate-600 text-slate-400 cursor-not-allowed'
