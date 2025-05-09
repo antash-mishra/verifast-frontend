@@ -6,14 +6,29 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
+      },
       animation: {
         'fade-in-up': 'fadeInUp 0.3s ease forwards',
+        fadeIn: 'fadeIn 0.3s ease-out',
+        fadeInUp: 'fadeInUp 0.5s ease-out',
+        fadeOut: 'fadeOut 0.3s ease-in'
       },
       keyframes: {
-        fadeInUp: {
+        fadeIn: {
           '0%': { opacity: '0', transform: 'translateY(10px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' }
         },
+        fadeInUp: {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' }
+        },
+        fadeOut: {
+          '0%': { opacity: '1', transform: 'translateY(0)' },
+          '100%': { opacity: '0', transform: 'translateY(10px)' }
+        }
       },
       typography: (theme) => ({
         DEFAULT: {

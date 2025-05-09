@@ -97,26 +97,26 @@ const ChatMessage = ({ message, isUser }) => {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in-up`}>
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold mr-2 shadow-md flex-shrink-0">
+        <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold mr-2 shadow-md flex-shrink-0">
           B
         </div>
       )}
       <div 
-        className={`${isUser ? 'max-w-[80%]' : 'max-w-[85%]'} rounded-2xl px-4 py-3 shadow-md ${
+        className={`${isUser ? 'max-w-[70%] sm:max-w-[75%] md:max-w-[80%]' : 'max-w-[75%] sm:max-w-[80%] md:max-w-[85%]'} rounded-2xl px-3 py-2 md:px-4 md:py-3 shadow-md ${
           isUser 
             ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-none' 
             : 'bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-100 rounded-bl-none'
-        } transform transition-all duration-200 text-left backdrop-blur-sm`}
+        } transform transition-all duration-200 text-left backdrop-blur-sm break-words`}
       >
         {isUser ? (
-          <p className="text-sm">{message.content}</p>
+          <p className="text-xs sm:text-sm break-words font-medium leading-relaxed tracking-wide">{message.content}</p>
         ) : (
           <>
-            <p className="text-sm">{formattedMessage}</p>
+            <p className="text-xs sm:text-sm break-words leading-relaxed tracking-wide">{formattedMessage}</p>
             {/* Citations section at bottom if present */}
             {Object.keys(citations).length > 0 && (
-              <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
-                <h4 className="text-xs font-bold mb-2 text-gray-600 dark:text-gray-400">Sources:</h4>
+              <div className="mt-3 md:mt-4 pt-2 md:pt-3 border-t border-gray-200 dark:border-gray-600">
+                <h4 className="text-xs font-semibold mb-2 text-gray-600 dark:text-gray-400 uppercase tracking-wider">Sources:</h4>
                 <ul className="text-xs space-y-2 list-none m-0 p-0">
                   {Object.entries(citations).map(([id, citation]) => {
                     const url = extractUrl(citation);
@@ -126,13 +126,13 @@ const ChatMessage = ({ message, isUser }) => {
                           [{id}]
                         </span>
                         <div className="flex flex-col">
-                          <span>{citation}</span>
+                          <span className="break-words text-gray-700 dark:text-gray-300">{citation}</span>
                           {url && (
                             <a 
                               href={url} 
                               target="_blank" 
                               rel="noopener noreferrer" 
-                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mt-1 truncate transition-colors duration-200"
+                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mt-1 truncate transition-colors duration-200 break-all font-medium"
                             >
                               {url}
                             </a>
@@ -146,7 +146,7 @@ const ChatMessage = ({ message, isUser }) => {
             )}
           </>
         )}
-        <p className={`text-xs mt-2 ${isUser ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>
+        <p className={`text-xs mt-2 ${isUser ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'} font-light tracking-wide`}>
           {new Date(message.timestamp).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit'
@@ -154,7 +154,7 @@ const ChatMessage = ({ message, isUser }) => {
         </p>
       </div>
       {isUser && (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold ml-2 shadow-md flex-shrink-0">
+        <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold ml-2 shadow-md flex-shrink-0">
           U
         </div>
       )}
