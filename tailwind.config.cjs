@@ -15,9 +15,38 @@ module.exports = {
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
+      typography: (theme) => ({
+        DEFAULT: {
+          css: {
+            textAlign: 'left',
+            h1: {
+              textAlign: 'left',
+            },
+            h2: {
+              textAlign: 'left',
+            },
+            h3: {
+              textAlign: 'left',
+            },
+            h4: {
+              textAlign: 'left',
+            },
+            p: {
+              textAlign: 'left',
+            },
+            li: {
+              textAlign: 'left',
+            },
+            blockquote: {
+              textAlign: 'left',
+            },
+          },
+        },
+      }),
     },
   },
   plugins: [
+    require('@tailwindcss/typography'),
     function ({ addUtilities }) {
       const newUtilities = {
         '.scrollbar-thin': {
