@@ -241,38 +241,6 @@ const ChatMessage = ({ message, isUser }) => {
                 children={messageWithReferences}
               />
             </div>
-            
-            {/* Citations section at bottom if present */}
-            {Object.keys(citations).length > 0 && (
-              <div className="mt-3 md:mt-4 pt-2 md:pt-3 border-t border-gray-200 dark:border-gray-600">
-                <h4 className="text-xs font-semibold mb-2 text-gray-600 dark:text-gray-400 uppercase tracking-wider">Sources:</h4>
-                <ul className="text-xs space-y-2 list-none m-0 p-0">
-                  {Object.entries(citations).map(([id, citation]) => {
-                    const url = extractUrl(citation);
-                    return (
-                      <li key={id} className="flex items-start">
-                        <span className="citation-number rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 text-xs font-medium mr-2 flex-shrink-0 mt-0.5">
-                          [{id}]
-                        </span>
-                        <div className="flex flex-col">
-                          <span className="break-words text-gray-700 dark:text-gray-300">{citation}</span>
-                          {url && (
-                            <a 
-                              href={url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mt-1 truncate transition-colors duration-200 break-all font-medium"
-                            >
-                              {url}
-                            </a>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
           </>
         )}
         <p className={`text-xs mt-2 ${isUser ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'} font-light tracking-wide`}>
