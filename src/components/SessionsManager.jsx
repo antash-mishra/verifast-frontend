@@ -52,6 +52,23 @@ const SessionsManager = ({ onSelectSession, currentSessionId, onClose }) => {
     }
   };
 
+  // Handle creating a new session
+  const handleCreateNewSession = async () => {
+    try {
+      setLoading(true);
+      // Create new session
+      const sessionResponse = await chatService.createSession();
+      // Select the new session
+      if (onSelectSession && sessionResponse.sessionId) {
+        onSelectSession(sessionResponse.sessionId);
+      }
+    } catch (err) {
+      setError('Failed to create new session. Please try again.');
+      console.error('Error creating new session:', err);
+      setLoading(false);
+    }
+  };
+
   // Handle deleting all sessions
   const handleDeleteAllSessions = async () => {
     if (!deleteConfirm) {
@@ -78,8 +95,8 @@ const SessionsManager = ({ onSelectSession, currentSessionId, onClose }) => {
   };
 
   return (
-    <div className="flex items-center justify-center w-full h-full">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full h-full md:h-auto md:max-w-4xl md:max-h-[90vh] overflow-hidden flex flex-col animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full h-full md:h-auto md:max-w-4xl md:max-h-[90vh] overflow-hidden flex flex-col animate-fadeIn relative m-2 md:m-0">
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-3 md:p-4 flex justify-between items-center sticky top-0 z-10">
           <h2 className="text-lg md:text-xl font-bold tracking-wide">Session Manager</h2>
@@ -203,6 +220,15 @@ const SessionsManager = ({ onSelectSession, currentSessionId, onClose }) => {
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleCreateNewSession}
+              className="px-3 py-1.5 md:px-4 md:py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none text-xs md:text-sm transition-colors duration-200 flex items-center"
+            >
+              <svg className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              New Session
+            </button>
             <button
               onClick={fetchSessions}
               className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none text-xs md:text-sm transition-colors duration-200"
