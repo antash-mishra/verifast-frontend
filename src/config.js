@@ -1,5 +1,5 @@
 // API URLs
-export const API_BASE_URL = 'https://verifast-backend-sparkling-sea-4629.fly.dev';
+export const API_BASE_URL = 'http://verifast-backend-sparkling-sea-4629.fly.dev';
 export const WS_BASE_URL = 'wss://verifast-backend-sparkling-sea-4629.fly.dev';
 
 // Application settings

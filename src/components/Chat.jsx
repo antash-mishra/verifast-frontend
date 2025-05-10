@@ -12,11 +12,13 @@ const Chat = () => {
   const [typingMessage, setTypingMessage] = useState(null);
   const [backendStatus, setBackendStatus] = useState({
     isReady: false,
-    message: 'Connecting to backend...'
+    message: 'Connecting to backend...',
+    ingestion: null
   });
   const [useWebSocket, setUseWebSocket] = useState(USE_WEBSOCKET);
   const [showSessionsManager, setShowSessionsManager] = useState(false);
   const webSocketRef = useRef(null);
+  const statusPollRef = useRef(null);
 
   // Initialize session on component mount
   useEffect(() => {
@@ -24,12 +26,7 @@ const Chat = () => {
       try {
         // Check backend status first
         const status = await chatService.getStatus();
-        setBackendStatus({
-          isReady: status.vector_store_ready,
-          message: status.vector_store_ready 
-            ? 'Connected to backend' 
-            : 'Backend is initializing data sources...'
-        });
+        updateBackendStatus(status);
 
         // Check if we have a saved session in localStorage
         const savedSessionId = localStorage.getItem('sessionId');
@@ -59,20 +56,82 @@ const Chat = () => {
         console.error('Error initializing session:', error);
         setBackendStatus({
           isReady: false,
-          message: 'Error connecting to backend. Please try again later.'
+          message: 'Error connecting to backend. Please try again later.',
+          ingestion: null
         });
       }
     };
 
     initSession();
 
+    // Setup status polling if backend is initializing
+    startStatusPolling();
+
     // Cleanup function
     return () => {
       if (webSocketRef.current) {
         webSocketRef.current.close();
       }
+      stopStatusPolling();
     };
   }, []);
+
+  // Update backend status and set up polling if needed
+  const updateBackendStatus = (status) => {
+    const isInProgress = status.ingestion_status?.in_progress || status.status === 'initializing';
+    const isReady = status.vector_store_ready;
+    
+    let message;
+    if (isInProgress) {
+      message = `Loading news data (${status.ingestion_status.progress}% complete)`;
+    } else if (status.status === 'error') {
+      message = status.message || 'Error in backend system';
+    } else if (isReady) {
+      message = 'Connected to backend';
+    } else {
+      message = 'Backend is not ready';
+    }
+    
+    setBackendStatus({
+      isReady: isReady,
+      message: message,
+      ingestion: status.ingestion_status
+    });
+    
+    // Start or stop polling based on current status
+    if (isInProgress) {
+      startStatusPolling();
+    } else {
+      stopStatusPolling();
+    }
+  };
+  
+  // Start polling for backend status updates
+  const startStatusPolling = () => {
+    if (!statusPollRef.current) {
+      statusPollRef.current = setInterval(async () => {
+        try {
+          const status = await chatService.getStatus();
+          updateBackendStatus(status);
+          
+          // Stop polling once ingestion is complete
+          if (!status.ingestion_status?.in_progress && status.status !== 'initializing') {
+            stopStatusPolling();
+          }
+        } catch (error) {
+          console.error('Error polling status:', error);
+        }
+      }, 2000); // Poll every 2 seconds
+    }
+  };
+  
+  // Stop polling for backend status
+  const stopStatusPolling = () => {
+    if (statusPollRef.current) {
+      clearInterval(statusPollRef.current);
+      statusPollRef.current = null;
+    }
+  };
 
   // Initialize WebSocket connection when session is ready
   useEffect(() => {
@@ -272,112 +331,109 @@ const Chat = () => {
     ? [...messages.filter(m => m.id !== typingMessage.id), typingMessage]
     : messages;
 
-  return (
-    <div className="flex flex-col h-screen bg-gradient-to-b from-slate-900 to-slate-800">
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-3 md:p-5 shadow-lg">
-        <div className="flex flex-col md:flex-row md:justify-between gap-3">
-          {/* App title and status */}
-          <div className="flex items-center">
-            <svg className="w-6 h-6 md:w-7 md:h-7 mr-2 md:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
-            </svg>
-            <h1 className="text-lg md:text-xl font-bold tracking-wide truncate">{APP_TITLE}</h1>
-            
-            {!backendStatus.isReady && (
-              <div className="ml-2 md:ml-4 text-xs bg-amber-500 text-white rounded-full px-2 py-1 animate-pulse truncate max-w-[150px] md:max-w-full font-medium tracking-wide">
-                {backendStatus.message}
-              </div>
-            )}
+  // Render ingestion status details if available
+  const renderIngestionStatus = () => {
+    const { ingestion } = backendStatus;
+    
+    if (!ingestion || ingestion.status === 'completed') return null;
+    
+    return (
+      <div className="absolute top-20 right-5 bg-slate-800 rounded-lg shadow-lg p-4 w-80 text-sm text-white border border-indigo-600 animate-fadeIn">
+        <h3 className="font-bold text-indigo-400 mb-2 flex items-center">
+          <svg className="w-4 h-4 mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Data Ingestion Status
+        </h3>
+        <div className="mt-2 space-y-1 text-gray-300">
+          <div className="flex justify-between">
+            <span>Progress:</span>
+            <span className="font-mono text-indigo-300">{ingestion.progress}%</span>
           </div>
-          
-          {/* Action buttons */}
-          <div className="flex flex-wrap gap-2">
-            <div className="text-xs bg-indigo-800 rounded-full px-3 py-1 flex items-center tracking-wide">
-              <span className="truncate max-w-[100px] md:max-w-full">Session: {sessionId.substring(0, 8)}</span>
+          <div className="w-full bg-gray-700 rounded-full h-2.5">
+            <div 
+              className="bg-indigo-600 h-2.5 rounded-full" 
+              style={{ width: `${ingestion.progress}%` }}
+            ></div>
+          </div>
+          <div className="flex justify-between">
+            <span>Sources:</span>
+            <span className="font-mono text-indigo-300">{ingestion.sources_processed}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Articles:</span>
+            <span className="font-mono text-indigo-300">{ingestion.articles_processed}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Chunks created:</span>
+            <span className="font-mono text-indigo-300">{ingestion.chunks_created}</span>
+          </div>
+          {ingestion.elapsed_time && (
+            <div className="flex justify-between">
+              <span>Time elapsed:</span>
+              <span className="font-mono text-indigo-300">{ingestion.elapsed_time}s</span>
             </div>
-            
-            <button
-              onClick={() => setShowSessionsManager(true)}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white py-1.5 px-3 md:py-2 md:px-4 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 transform hover:scale-105 shadow-md flex items-center tracking-wide"
-            >
-              <svg className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
-              </svg>
-              Sessions
-            </button>
-            
-            <button
-              onClick={async () => {
-                try {
-                  const sessionResponse = await chatService.createSession();
-                  setSessionId(sessionResponse.sessionId);
-                  localStorage.setItem('sessionId', sessionResponse.sessionId);
-                  setMessages([]);
-                  // Optionally, reconnect WebSocket if enabled
-                  if (useWebSocket && webSocketRef.current) {
-                    webSocketRef.current.close();
-                    const wsConnection = createWebSocketConnection(
-                      sessionResponse.sessionId,
-                      handleWebSocketMessage
-                    );
-                    webSocketRef.current = wsConnection;
-                  }
-                } catch (error) {
-                  console.error('Error creating new session:', error);
-                }
-              }}
-              className="bg-green-500 hover:bg-green-600 text-white py-1.5 px-3 md:py-2 md:px-4 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 transform hover:scale-105 shadow-md flex items-center tracking-wide"
-            >
-              <svg className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
-              </svg>
-              New
-            </button>
-            
-            <button
-              onClick={handleClearSession}
-              className="bg-rose-500 hover:bg-rose-600 text-white py-1.5 px-3 md:py-2 md:px-4 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 transform hover:scale-105 shadow-md flex items-center tracking-wide"
-              disabled={loading}
-            >
-              <svg className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-              </svg>
-              Clear
-            </button>
-          </div>
+          )}
         </div>
       </div>
+    );
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-gradient-to-b from-slate-900 to-slate-800 relative">
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-5 shadow-lg flex justify-between items-center">
+        <div className="flex items-center">
+          <svg className="w-7 h-7 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+          </svg>
+          <h1 className="text-xl font-bold tracking-wide">{APP_TITLE}</h1>
+          
+          {!backendStatus.isReady && (
+            <div className="ml-4 text-xs bg-amber-500 text-white rounded-full px-3 py-1 animate-pulse">
+              {backendStatus.message}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center space-x-3">
+          <div className="text-xs bg-indigo-800 rounded-full px-3 py-1">
+            Session: {sessionId.substring(0, 8)}
+          </div>
+          <button
+            onClick={() => setShowSessionsManager(true)}
+            className="bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105 shadow-md flex items-center"
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7"></path>
+            </svg>
+            Sessions
+          </button>
+          <button
+            onClick={handleClearSession}
+            className="bg-rose-500 hover:bg-rose-600 text-white py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 shadow-md flex items-center"
+            disabled={loading}
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+            Clear Chat
+          </button>
+        </div>
+      </div>
+      
+      {renderIngestionStatus()}
       
       <ChatHistory messages={displayMessages} />
       
       <ChatInput onSendMessage={handleSendMessage} isLoading={loading} />
-
-      {/* Sessions Manager Modal with smooth animation */}
-      <div 
-        className={`fixed inset-0 bg-black transition-opacity duration-300 ease-in-out z-50 ${
-          showSessionsManager ? 'bg-opacity-50 pointer-events-auto' : 'bg-opacity-0 pointer-events-none'
-        }`}
-        onClick={(e) => {
-          // Close when clicking the backdrop (but not when clicking on the modal itself)
-          if (e.target === e.currentTarget) {
-            setShowSessionsManager(false);
-          }
-        }}
-      >
-        <div 
-          className={`transition-all duration-300 ease-in-out transform h-full md:flex md:items-center md:justify-center ${
-            showSessionsManager ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
-          }`}
-        >
-          {showSessionsManager && (
-            <SessionsManager 
-              onSelectSession={handleSelectSession}
-              currentSessionId={sessionId}
-              onClose={() => setShowSessionsManager(false)}
-            />
-          )}
-        </div>
-      </div>
+      
+      {showSessionsManager && (
+        <SessionsManager
+          onClose={() => setShowSessionsManager(false)}
+          onSelectSession={handleSelectSession}
+          currentSessionId={sessionId}
+        />
+      )}
     </div>
   );
 };
