@@ -121,8 +121,13 @@ const ListItem = ({children, ...props}) => {
 };
 
 const ChatMessage = ({ message, isUser }) => {
+  // Check if this is a streaming message
+  const isStreaming = message.isStreaming === true;
+
   // Function to process citation text into structured data
   const extractCitations = (text) => {
+    if (isStreaming) return {}; // Don't process citations for streaming messages
+    
     // Look for a Sources section at the end of the message
     const sourcesSectionRegex = /\n\s*Sources:\s*\n([\s\S]+)$/i;
     const sourcesMatch = text.match(sourcesSectionRegex);
@@ -161,6 +166,9 @@ const ChatMessage = ({ message, isUser }) => {
   const formatMessageWithCitations = () => {
     if (isUser || !message.content) return message.content;
     
+    // If this is a streaming message, return the content as is
+    if (isStreaming) return message.content;
+    
     const citations = extractCitations(message.content);
     
     // Split content and sources section
@@ -188,7 +196,7 @@ const ChatMessage = ({ message, isUser }) => {
 
   // Process citation references in the message
   const processMessageWithCitationReferences = (content) => {
-    if (isUser || !content) return content;
+    if (isUser || !content || isStreaming) return content;
     
     let processedContent = content;
     
@@ -204,7 +212,7 @@ const ChatMessage = ({ message, isUser }) => {
   const messageWithReferences = processMessageWithCitationReferences(formattedMessage);
 
   // Check if content is likely a list (has bullet points)
-  const isListContent = formattedMessage?.includes('*') || formattedMessage?.includes('-') || formattedMessage?.includes('•');
+  const isListContent = !isStreaming && (formattedMessage?.includes('*') || formattedMessage?.includes('-') || formattedMessage?.includes('•'));
 
   // Custom Markdown components
   const markdownComponents = {
@@ -231,6 +239,8 @@ const ChatMessage = ({ message, isUser }) => {
         } transform transition-all duration-200 text-left backdrop-blur-sm break-words`}
       >
         {isUser ? (
+          <p className="text-xs sm:text-sm break-words font-medium leading-relaxed tracking-wide">{message.content}</p>
+        ) : isStreaming ? (
           <p className="text-xs sm:text-sm break-words font-medium leading-relaxed tracking-wide">{message.content}</p>
         ) : (
           <>

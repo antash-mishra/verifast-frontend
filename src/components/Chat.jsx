@@ -166,7 +166,8 @@ const Chat = () => {
           id: taskId,
           sender: 'bot',
           content: '...',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          isStreaming: true
         });
         break;
         
@@ -175,7 +176,8 @@ const Chat = () => {
           id: taskId,
           sender: 'bot',
           content,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          isStreaming: true
         });
         break;
         
