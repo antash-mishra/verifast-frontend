@@ -55,6 +55,47 @@ const cleanupMarkdown = (text) => {
   return cleanedLines.join('\n');
 };
 
+// Fix spacing issues in streaming text where words run together without spaces
+const fixStreamingTextSpacing = (text) => {
+  if (!text) return '';
+  
+  // 1. Add space between lowercase letter followed by uppercase letter (camelCase separation)
+  // e.g., "beenchargedwithmurder" -> "been charged with murder"
+  text = text.replace(/([a-z])([A-Z])/g, '$1 $2');
+  
+  // 2. Add space between word and punctuation if no space exists and not at end of sentence
+  text = text.replace(/([a-zA-Z])([,.!?:;])([a-zA-Z])/g, '$1$2 $3');
+  
+  // 3. Add space between alphanumeric and special markdown characters like * and [
+  text = text.replace(/([a-zA-Z0-9])(\*\*|\*|\[\[|\]\]|\[|\])/g, '$1 $2');
+  text = text.replace(/(\*\*|\*|\[\[|\]\]|\[|\])([a-zA-Z0-9])/g, '$1 $2');
+  
+  // 4. Fix common patterns where words are joined without spaces
+  const commonPatterns = [
+    // Words with 'and' stuck to them
+    /([a-z])(and)([A-Z]|[a-z])/g, 
+    // Words with 'of' stuck to them
+    /([a-z])(of)([A-Z]|[a-z])/g,
+    // Words with 'the' stuck to them
+    /([a-z])(the)([A-Z]|[a-z])/g,
+    // Words with 'in' stuck to them
+    /([a-z])(in)([A-Z]|[a-z])/g,
+    // Words with 'for' stuck to them
+    /([a-z])(for)([A-Z]|[a-z])/g,
+    // Words with 'with' stuck to them
+    /([a-z])(with)([A-Z]|[a-z])/g
+  ];
+  
+  commonPatterns.forEach(pattern => {
+    text = text.replace(pattern, '$1 $2 $3');
+  });
+  
+  // 5. Remove duplicate spaces
+  text = text.replace(/\s+/g, ' ');
+  
+  return text;
+};
+
 // Citation tooltip component
 const CitationTooltip = ({ children, citation }) => {
   const [showTooltip, setShowTooltip] = useState(false);
@@ -241,7 +282,9 @@ const ChatMessage = ({ message, isUser }) => {
         {isUser ? (
           <p className="text-xs sm:text-sm break-words font-medium leading-relaxed tracking-wide">{message.content}</p>
         ) : isStreaming ? (
-          <p className="text-xs sm:text-sm break-words font-medium leading-relaxed tracking-wide">{message.content}</p>
+          <p className="text-xs sm:text-sm break-words font-medium leading-relaxed tracking-wide">
+            {fixStreamingTextSpacing(message.content)}
+          </p>
         ) : (
           <>
             <div className={`prose prose-sm dark:prose-invert max-w-none ${isListContent ? 'prose-li:my-1' : ''} break-words leading-relaxed tracking-wide prose-headings:font-bold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-strong:text-indigo-700 dark:prose-strong:text-indigo-300 prose-pre:bg-slate-800 prose-pre:text-gray-200 prose-code:text-rose-600 dark:prose-code:text-rose-400 prose-ul:pl-0`}>
